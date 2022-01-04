@@ -13,7 +13,6 @@ import (
 
 	"code.gitea.io/gitea/models/db"
 	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/models/unit"
 	user_model "code.gitea.io/gitea/models/user"
 	"code.gitea.io/gitea/modules/git"
 	"code.gitea.io/gitea/modules/log"
@@ -221,37 +220,6 @@ func (pr *PullRequest) loadProtectedBranch(ctx context.Context) (err error) {
 	return
 }
 
-// GetDefaultMergeMessage returns default message used when merging pull request
-func (pr *PullRequest) GetDefaultMergeMessage() string {
-	if pr.HeadRepo == nil {
-		var err error
-		pr.HeadRepo, err = repo_model.GetRepositoryByID(pr.HeadRepoID)
-		if err != nil {
-			log.Error("GetRepositoryById[%d]: %v", pr.HeadRepoID, err)
-			return ""
-		}
-	}
-	if err := pr.LoadIssue(); err != nil {
-		log.Error("Cannot load issue %d for PR id %d: Error: %v", pr.IssueID, pr.ID, err)
-		return ""
-	}
-	if err := pr.LoadBaseRepo(); err != nil {
-		log.Error("LoadBaseRepo: %v", err)
-		return ""
-	}
-
-	issueReference := "#"
-	if pr.BaseRepo.UnitEnabled(unit.TypeExternalTracker) {
-		issueReference = "!"
-	}
-
-	if pr.BaseRepoID == pr.HeadRepoID {
-		return fmt.Sprintf("Merge pull request '%s' (%s%d) from %s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadBranch, pr.BaseBranch)
-	}
-
-	return fmt.Sprintf("Merge pull request '%s' (%s%d) from %s:%s into %s", pr.Issue.Title, issueReference, pr.Issue.Index, pr.HeadRepo.FullName(), pr.HeadBranch, pr.BaseBranch)
-}
-
 // ReviewCount represents a count of Reviews
 type ReviewCount struct {
 	IssueID int64
@@ -332,22 +300,6 @@ func (pr *PullRequest) getReviewedByLines(writer io.Writer) error {
 		reviewersWritten++
 	}
 	return committer.Commit()
-}
-
-// GetDefaultSquashMessage returns default message used when squash and merging pull request
-func (pr *PullRequest) GetDefaultSquashMessage() string {
-	if err := pr.LoadIssue(); err != nil {
-		log.Error("LoadIssue: %v", err)
-		return ""
-	}
-	if err := pr.LoadBaseRepo(); err != nil {
-		log.Error("LoadBaseRepo: %v", err)
-		return ""
-	}
-	if pr.BaseRepo.UnitEnabled(unit.TypeExternalTracker) {
-		return fmt.Sprintf("%s (!%d)", pr.Issue.Title, pr.Issue.Index)
-	}
-	return fmt.Sprintf("%s (#%d)", pr.Issue.Title, pr.Issue.Index)
 }
 
 // GetGitRefName returns git ref for hidden pull request branch

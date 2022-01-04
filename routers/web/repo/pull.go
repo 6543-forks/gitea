@@ -943,15 +943,7 @@ func MergePullRequest(ctx *context.Context) {
 
 	message := strings.TrimSpace(form.MergeTitleField)
 	if len(message) == 0 {
-		if repo_model.MergeStyle(form.Do) == repo_model.MergeStyleMerge {
-			message = pr.GetDefaultMergeMessage()
-		}
-		if repo_model.MergeStyle(form.Do) == repo_model.MergeStyleRebaseMerge {
-			message = pr.GetDefaultMergeMessage()
-		}
-		if repo_model.MergeStyle(form.Do) == repo_model.MergeStyleSquash {
-			message = pr.GetDefaultSquashMessage()
-		}
+		message = pull_service.GetDefaultMergeMessage(ctx.Repo.GitRepo, pr, repo_model.MergeStyle(form.Do))
 	}
 
 	form.MergeMessageField = strings.TrimSpace(form.MergeMessageField)
