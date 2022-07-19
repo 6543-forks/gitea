@@ -17,6 +17,7 @@ import (
 	"code.gitea.io/gitea/models/perm"
 	repo_model "code.gitea.io/gitea/models/repo"
 	"code.gitea.io/gitea/modules/json"
+	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/queue"
 	api "code.gitea.io/gitea/modules/structs"
 	"code.gitea.io/gitea/services/forms"
@@ -177,6 +178,11 @@ func doAPICreateUserKey(ctx APITestContext, keyname, keyFile string, callback ..
 		}
 		resp := ctx.Session.MakeRequest(t, req, http.StatusCreated)
 		var publicKey api.PublicKey
+		if resp.Code != http.StatusCreated {
+			log.Error("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+			log.Error(resp.Body.String())
+			log.Error("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+		}
 		DecodeJSON(t, resp, &publicKey)
 		if len(callback) > 0 {
 			callback[0](t, publicKey)

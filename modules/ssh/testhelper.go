@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// GenKeyPair make a pair of public and private keys for SSH access.
+// GenKeyPair create a ecdsa-sha2-nistp521 key-pair for SSH access.
 // Public key is encoded in the format for inclusion in an OpenSSH authorized_keys file.
 // Private Key generated is PEM encoded
 func GenKeyPair(keyPath string) error {
