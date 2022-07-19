@@ -5,14 +5,15 @@
 package ssh
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/pem"
 	"os"
 
 	"code.gitea.io/gitea/modules/log"
 
-	"github.com/mikesmitty/edkey"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -53,19 +54,23 @@ func GenKeyPair(keyPath string) error {
 }
 
 func genKeyPair() (publicK, privateK []byte, err error) {
-	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// generate private key
+	privateKeyBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return nil, nil, err
+	}
 	privateK = pem.EncodeToMemory(&pem.Block{
-		Type:  "OPENSSH PRIVATE KEY",
-		Bytes: edkey.MarshalED25519PrivateKey(privateKey),
+		Type:  "ECDSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
 	})
 
 	// generate public key
-	pub, err := ssh.NewPublicKey(publicKey)
+	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return nil, nil, err
 	}
