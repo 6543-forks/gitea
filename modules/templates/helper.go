@@ -274,6 +274,8 @@ func NewFuncMap() []template.FuncMap {
 		"Printf":   fmt.Sprintf,
 		"Escape":   Escape,
 		"Sec2Time": util.SecToTime,
+
+		"Sec2TrackedTime": util.Sec2TrackedTime,
 		"ParseDeadline": func(deadline string) []string {
 			return strings.Split(deadline, "|")
 		},
