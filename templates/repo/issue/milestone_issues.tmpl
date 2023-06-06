@@ -41,6 +41,14 @@
 		<div id="issue-filters" class="ui stackable grid">
 			<div class="six wide column">
 				{{template "repo/issue/openclose" .}}
+				{{if .TotalTrackedTime}}
+					<div class="ui compact tiny secondary menu">
+						<span class="item">
+							{{svg "octicon-clock"}}
+							{{.TotalTrackedTime | Sec2Time}}
+						</span>
+					</div>
+				{{end}}
 			</div>
 			<div class="ten wide right aligned column">
 				<div class="ui secondary filter stackable menu labels">

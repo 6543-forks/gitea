@@ -197,21 +197,23 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption uti
 		}
 	}
 
+	issueStatOpts := &issues_model.IssueStatsOptions{
+		RepoID:            repo.ID,
+		Labels:            selectLabels,
+		MilestoneID:       milestoneID,
+		AssigneeID:        assigneeID,
+		MentionedID:       mentionedID,
+		PosterID:          posterID,
+		ReviewRequestedID: reviewRequestedID,
+		IsPull:            isPullOption,
+		IssueIDs:          issueIDs,
+	}
+
 	var issueStats *issues_model.IssueStats
 	if forceEmpty {
 		issueStats = &issues_model.IssueStats{}
 	} else {
-		issueStats, err = issues_model.GetIssueStats(&issues_model.IssueStatsOptions{
-			RepoID:            repo.ID,
-			Labels:            selectLabels,
-			MilestoneID:       milestoneID,
-			AssigneeID:        assigneeID,
-			MentionedID:       mentionedID,
-			PosterID:          posterID,
-			ReviewRequestedID: reviewRequestedID,
-			IsPull:            isPullOption,
-			IssueIDs:          issueIDs,
-		})
+		issueStats, err = issues_model.GetIssueStats(issueStatOpts)
 		if err != nil {
 			ctx.ServerError("GetIssueStats", err)
 			return
@@ -222,6 +224,15 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption uti
 	// if open issues are zero and close don't, use closed as default
 	if len(ctx.FormString("state")) == 0 && issueStats.OpenCount == 0 && issueStats.ClosedCount != 0 {
 		isShowClosed = true
+	}
+
+	var totalTrackedTime int64 = 0
+	if !forceEmpty {
+		totalTrackedTime, err = issues_model.GetIssueTotalTrackedTime(issueStatOpts, isShowClosed)
+		if err != nil {
+			ctx.ServerError("GetIssueTotalTrackedTime", err)
+			return
+		}
 	}
 
 	page := ctx.FormInt("page")
@@ -297,6 +308,7 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption uti
 	ctx.Data["Issues"] = issues
 	ctx.Data["CommitLastStatus"] = lastStatus
 	ctx.Data["CommitStatuses"] = commitStatuses
+	ctx.Data["TotalTrackedTime"] = totalTrackedTime
 
 	// Get assignees.
 	ctx.Data["Assignees"], err = repo_model.GetRepoAssignees(ctx, repo)

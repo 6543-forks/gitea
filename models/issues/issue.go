@@ -1687,61 +1687,66 @@ func GetIssueStats(opts *IssueStatsOptions) (*IssueStats, error) {
 	return accum, nil
 }
 
+func applyIssueStatsOptions(sess *xorm.Session, opts *IssueStatsOptions) *xorm.Session {
+	sess.And("issue.repo_id = ?", opts.RepoID)
+
+	if len(opts.Labels) > 0 && opts.Labels != "0" {
+		labelIDs, err := base.StringsToInt64s(strings.Split(opts.Labels, ","))
+		if err != nil {
+			log.Warn("Malformed Labels argument: %s", opts.Labels)
+		} else {
+			for i, labelID := range labelIDs {
+				if labelID > 0 {
+					sess.Join("INNER", fmt.Sprintf("issue_label il%d", i),
+						fmt.Sprintf("issue.id = il%[1]d.issue_id AND il%[1]d.label_id = %[2]d", i, labelID))
+				} else {
+					sess.Where("issue.id NOT IN (SELECT issue_id FROM issue_label WHERE label_id = ?)", -labelID)
+				}
+			}
+		}
+	}
+
+	if opts.MilestoneID > 0 {
+		sess.And("issue.milestone_id = ?", opts.MilestoneID)
+	}
+
+	if opts.AssigneeID > 0 {
+		applyAssigneeCondition(sess, opts.AssigneeID)
+	}
+
+	if opts.PosterID > 0 {
+		applyPosterCondition(sess, opts.PosterID)
+	}
+
+	if opts.MentionedID > 0 {
+		applyMentionedCondition(sess, opts.MentionedID)
+	}
+
+	if opts.ReviewRequestedID > 0 {
+		applyReviewRequestedCondition(sess, opts.ReviewRequestedID)
+	}
+
+	switch opts.IsPull {
+	case util.OptionalBoolTrue:
+		sess.And("issue.is_pull=?", true)
+	case util.OptionalBoolFalse:
+		sess.And("issue.is_pull=?", false)
+	}
+
+	return sess
+}
+
 func getIssueStatsChunk(opts *IssueStatsOptions, issueIDs []int64) (*IssueStats, error) {
 	stats := &IssueStats{}
 
 	countSession := func(opts *IssueStatsOptions, issueIDs []int64) *xorm.Session {
-		sess := db.GetEngine(db.DefaultContext).
-			Where("issue.repo_id = ?", opts.RepoID)
+		sess := db.GetEngine(db.DefaultContext).Table("issue")
 
 		if len(issueIDs) > 0 {
 			sess.In("issue.id", issueIDs)
 		}
 
-		if len(opts.Labels) > 0 && opts.Labels != "0" {
-			labelIDs, err := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-			if err != nil {
-				log.Warn("Malformed Labels argument: %s", opts.Labels)
-			} else {
-				for i, labelID := range labelIDs {
-					if labelID > 0 {
-						sess.Join("INNER", fmt.Sprintf("issue_label il%d", i),
-							fmt.Sprintf("issue.id = il%[1]d.issue_id AND il%[1]d.label_id = %[2]d", i, labelID))
-					} else {
-						sess.Where("issue.id NOT IN (SELECT issue_id FROM issue_label WHERE label_id = ?)", -labelID)
-					}
-				}
-			}
-		}
-
-		if opts.MilestoneID > 0 {
-			sess.And("issue.milestone_id = ?", opts.MilestoneID)
-		}
-
-		if opts.AssigneeID > 0 {
-			applyAssigneeCondition(sess, opts.AssigneeID)
-		}
-
-		if opts.PosterID > 0 {
-			applyPosterCondition(sess, opts.PosterID)
-		}
-
-		if opts.MentionedID > 0 {
-			applyMentionedCondition(sess, opts.MentionedID)
-		}
-
-		if opts.ReviewRequestedID > 0 {
-			applyReviewRequestedCondition(sess, opts.ReviewRequestedID)
-		}
-
-		switch opts.IsPull {
-		case util.OptionalBoolTrue:
-			sess.And("issue.is_pull=?", true)
-		case util.OptionalBoolFalse:
-			sess.And("issue.is_pull=?", false)
-		}
-
-		return sess
+		return applyIssueStatsOptions(sess, opts)
 	}
 
 	var err error
