@@ -17,6 +17,7 @@ import (
 	"code.gitea.io/gitea/modules/indexer/code/bleve"
 	"code.gitea.io/gitea/modules/indexer/code/elasticsearch"
 	"code.gitea.io/gitea/modules/indexer/code/internal"
+	"code.gitea.io/gitea/modules/indexer/code/meilisearch"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/process"
 	"code.gitea.io/gitea/modules/queue"
@@ -190,6 +191,15 @@ func Init() {
 				(*globalIndexer.Load()).Close()
 				close(waitChannel)
 				log.Fatal("PID: %d Unable to initialize the elasticsearch Repository Indexer connstr: %s Error: %v", os.Getpid(), setting.Indexer.RepoConnStr, err)
+			}
+		case "meilisearch":
+			rIndexer = meilisearch.NewIndexer(setting.Indexer.RepoConnStr, setting.Indexer.RepoConnAuth, setting.Indexer.RepoIndexerName)
+			existed, err = rIndexer.Init(ctx)
+			if err != nil {
+				cancel()
+				(*globalIndexer.Load()).Close()
+				close(waitChannel)
+				log.Fatal("Unable to issueIndexer.Init with connection %s Error: %v", setting.Indexer.RepoConnStr, err)
 			}
 
 		default:
