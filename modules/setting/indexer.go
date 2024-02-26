@@ -28,6 +28,7 @@ var Indexer = struct {
 	RepoType             string
 	RepoPath             string
 	RepoConnStr          string
+	RepoConnAuth         string
 	RepoIndexerName      string
 	MaxIndexerFileSize   int64
 	IncludePatterns      []glob.Glob
@@ -45,6 +46,7 @@ var Indexer = struct {
 	RepoType:             "bleve",
 	RepoPath:             "indexers/repos.bleve",
 	RepoConnStr:          "",
+	RepoConnAuth:         "",
 	RepoIndexerName:      "gitea_codes",
 	MaxIndexerFileSize:   1024 * 1024,
 	ExcludeVendored:      true,
@@ -78,11 +80,26 @@ func loadIndexerFrom(rootCfg ConfigProvider) {
 	Indexer.RepoIndexerEnabled = sec.Key("REPO_INDEXER_ENABLED").MustBool(false)
 	Indexer.RepoIndexerRepoTypes = strings.Split(sec.Key("REPO_INDEXER_REPO_TYPES").MustString("sources,forks,mirrors,templates"), ",")
 	Indexer.RepoType = sec.Key("REPO_INDEXER_TYPE").MustString("bleve")
-	Indexer.RepoPath = filepath.ToSlash(sec.Key("REPO_INDEXER_PATH").MustString(filepath.ToSlash(filepath.Join(AppDataPath, "indexers/repos.bleve"))))
-	if !filepath.IsAbs(Indexer.RepoPath) {
-		Indexer.RepoPath = filepath.ToSlash(filepath.Join(AppWorkPath, Indexer.RepoPath))
+	if Indexer.RepoType == "bleve" {
+		Indexer.RepoPath = filepath.ToSlash(sec.Key("REPO_INDEXER_PATH").MustString(filepath.ToSlash(filepath.Join(AppDataPath, "indexers/repos.bleve"))))
+		if !filepath.IsAbs(Indexer.RepoPath) {
+			Indexer.RepoPath = filepath.ToSlash(filepath.Join(AppWorkPath, Indexer.RepoPath))
+		}
+	} else {
+		Indexer.RepoConnStr = sec.Key("REPO_INDEXER_CONN_STR").MustString("")
+		Indexer.RepoConnStr = sec.Key("ISSUE_INDEXER_CONN_STR").MustString(Indexer.IssueConnStr)
+		if Indexer.RepoType == "meilisearch" {
+			u, err := url.Parse(Indexer.RepoConnStr)
+			if err != nil {
+				log.Warn("Failed to parse ISSUE_INDEXER_CONN_STR: %v", err)
+				u = &url.URL{}
+			}
+			Indexer.RepoConnAuth, _ = u.User.Password()
+			u.User = nil
+			Indexer.RepoConnStr = u.String()
+		}
 	}
-	Indexer.RepoConnStr = sec.Key("REPO_INDEXER_CONN_STR").MustString("")
+
 	Indexer.RepoIndexerName = sec.Key("REPO_INDEXER_NAME").MustString("gitea_codes")
 
 	Indexer.IncludePatterns = IndexerGlobFromString(sec.Key("REPO_INDEXER_INCLUDE").MustString(""))

@@ -117,7 +117,7 @@ func Init() {
 
 	// Create the Queue
 	switch setting.Indexer.RepoType {
-	case "bleve", "elasticsearch":
+	case "bleve", "elasticsearch", "meilisearch":
 		handler := func(items ...*internal.IndexerData) (unhandled []*internal.IndexerData) {
 			indexer := *globalIndexer.Load()
 			for _, indexerData := range items {
