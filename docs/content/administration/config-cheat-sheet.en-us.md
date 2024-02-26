@@ -474,10 +474,10 @@ relation to port exhaustion.
 
 - `REPO_INDEXER_ENABLED`: **false**: Enables code search (uses a lot of disk space, about 6 times more than the repository size).
 - `REPO_INDEXER_REPO_TYPES`: **sources,forks,mirrors,templates**: Repo indexer units. The items to index could be `sources`, `forks`, `mirrors`, `templates` or any combination of them separated by a comma. If empty then it defaults to `sources` only, as if you'd like to disable fully please see `REPO_INDEXER_ENABLED`.
-- `REPO_INDEXER_TYPE`: **bleve**: Code search engine type, could be `bleve` or `elasticsearch`.
+- `REPO_INDEXER_TYPE`: **bleve**: Code search engine type, could be `bleve`, `elasticsearch` or `meilisearch`.
 - `REPO_INDEXER_PATH`: **indexers/repos.bleve**: Index file used for code search.
-- `REPO_INDEXER_CONN_STR`: ****: Code indexer connection string, available when `REPO_INDEXER_TYPE` is elasticsearch. i.e. http://elastic:password@localhost:9200
-- `REPO_INDEXER_NAME`: **gitea_codes**: Code indexer name, available when `REPO_INDEXER_TYPE` is elasticsearch
+- `REPO_INDEXER_CONN_STR`: ****: Code indexer connection string, available when `REPO_INDEXER_TYPE` is elasticsearch (e.g. http://elastic:password@localhost:9200) or meilisearch (e.g. http://:apikey@localhost:7700)
+- `REPO_INDEXER_NAME`: **gitea_codes**: Code indexer name, available when `REPO_INDEXER_TYPE` is elasticsearch or meilisearch.
 
 - `REPO_INDEXER_INCLUDE`: **empty**: A comma separated list of glob patterns (see https://github.com/gobwas/glob) to **include** in the index. Use `**.txt` to match any files with .txt extension. An empty list means include all files.
 - `REPO_INDEXER_EXCLUDE`: **empty**: A comma separated list of glob patterns (see https://github.com/gobwas/glob) to **exclude** from the index. Files that match this list will not be indexed, even if they match in `REPO_INDEXER_INCLUDE`.
