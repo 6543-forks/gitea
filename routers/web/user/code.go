@@ -10,6 +10,7 @@ import (
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
 	code_indexer "code.gitea.io/gitea/modules/indexer/code"
+	"code.gitea.io/gitea/modules/optional"
 	"code.gitea.io/gitea/modules/setting"
 	shared_user "code.gitea.io/gitea/routers/web/shared/user"
 )
@@ -75,7 +76,14 @@ func CodeSearch(ctx *context.Context) {
 	)
 
 	if len(repoIDs) > 0 {
-		total, searchResults, searchResultLanguages, err = code_indexer.PerformSearch(ctx, repoIDs, language, keyword, page, setting.UI.RepoSearchPagingNum, isMatch)
+		total, searchResults, searchResultLanguages, err = code_indexer.PerformSearch(ctx,
+			repoIDs,
+			language,
+			keyword,
+			page,
+			setting.UI.RepoSearchPagingNum,
+			isMatch,
+			optional.Some(false)) //TODO(3670) make wiki searchable
 		if err != nil {
 			if code_indexer.IsAvailable(ctx) {
 				ctx.ServerError("SearchResults", err)

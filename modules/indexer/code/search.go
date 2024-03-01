@@ -11,6 +11,7 @@ import (
 
 	"code.gitea.io/gitea/modules/highlight"
 	"code.gitea.io/gitea/modules/indexer/code/internal"
+	"code.gitea.io/gitea/modules/optional"
 	"code.gitea.io/gitea/modules/timeutil"
 )
 
@@ -112,7 +113,7 @@ func searchResult(result *internal.SearchResult, startIndex, endIndex int) (*Res
 }
 
 // PerformSearch perform a search on a repository
-func PerformSearch(ctx context.Context, repoIDs []int64, language, keyword string, page, pageSize int, isMatch bool) (int, []*Result, []*internal.SearchResultLanguages, error) {
+func PerformSearch(ctx context.Context, repoIDs []int64, language, keyword string, page, pageSize int, isMatch bool, isWiki optional.Option[bool]) (int, []*Result, []*internal.SearchResultLanguages, error) {
 	if len(keyword) == 0 {
 		return 0, nil, nil, nil
 	}

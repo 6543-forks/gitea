@@ -21,6 +21,7 @@ type RepoChanges struct {
 // IndexerData represents data stored in the code indexer
 type IndexerData struct {
 	RepoID int64 `json:"repo_id"`
+	// TODO(3670) IsWiki bool  `json:"is_wiki"`
 }
 
 // SearchResult result of performing a search in a repo

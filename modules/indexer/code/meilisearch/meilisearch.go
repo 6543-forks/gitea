@@ -4,28 +4,14 @@
 package meilisearch
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
 	"strconv"
-	"strings"
 
 	repo_model "code.gitea.io/gitea/models/repo"
-	"code.gitea.io/gitea/modules/analyze"
-	"code.gitea.io/gitea/modules/charset"
-	"code.gitea.io/gitea/modules/git"
 	"code.gitea.io/gitea/modules/indexer/code/internal"
 	indexer_internal "code.gitea.io/gitea/modules/indexer/internal"
 	inner_meilisearch "code.gitea.io/gitea/modules/indexer/internal/meilisearch"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/setting"
-	"code.gitea.io/gitea/modules/timeutil"
-	"code.gitea.io/gitea/modules/typesniffer"
-	"github.com/go-enry/go-enry/v2"
 	"github.com/meilisearch/meilisearch-go"
-	"github.com/olivere/elastic/v7"
 )
 
 const (
@@ -88,6 +74,7 @@ func (b *Indexer) Delete(ctx context.Context, repoID int64) error {
 
 // ###### TODO ######
 
+/*
 func (b *Indexer) addUpdate(ctx context.Context, batchWriter git.WriteCloserError, batchReader *bufio.Reader, sha string, update internal.FileUpdate, repo *repo_model.Repository) ([]elastic.BulkableRequest, error) {
 	// Ignore vendored files in code search
 	if setting.Indexer.ExcludeVendored && analyze.IsVendor(update.Filename) {
@@ -153,51 +140,56 @@ func (b *Indexer) addDelete(filename string, repo *repo_model.Repository) elasti
 		Index(b.inner.VersionedIndexName()).
 		Id(id)
 }
+*/
 
 // Index will save the index data
 func (b *Indexer) Index(ctx context.Context, repo *repo_model.Repository, sha string, changes *internal.RepoChanges) error {
-	reqs := make([]elastic.BulkableRequest, 0)
-	if len(changes.Updates) > 0 {
-		// Now because of some insanity with git cat-file not immediately failing if not run in a valid git directory we need to run git rev-parse first!
-		if err := git.EnsureValidGitRepository(ctx, repo.RepoPath()); err != nil {
-			log.Error("Unable to open git repo: %s for %-v: %v", repo.RepoPath(), repo, err)
-			return err
-		}
-
-		batchWriter, batchReader, cancel := git.CatFileBatch(ctx, repo.RepoPath())
-		defer cancel()
-
-		for _, update := range changes.Updates {
-			updateReqs, err := b.addUpdate(ctx, batchWriter, batchReader, sha, update, repo)
-			if err != nil {
+	/*
+		reqs := make([]elastic.BulkableRequest, 0)
+		if len(changes.Updates) > 0 {
+			// Now because of some insanity with git cat-file not immediately failing if not run in a valid git directory we need to run git rev-parse first!
+			if err := git.EnsureValidGitRepository(ctx, repo.RepoPath()); err != nil {
+				log.Error("Unable to open git repo: %s for %-v: %v", repo.RepoPath(), repo, err)
 				return err
 			}
-			if len(updateReqs) > 0 {
-				reqs = append(reqs, updateReqs...)
+
+			batchWriter, batchReader, cancel := git.CatFileBatch(ctx, repo.RepoPath())
+			defer cancel()
+
+			for _, update := range changes.Updates {
+				updateReqs, err := b.addUpdate(ctx, batchWriter, batchReader, sha, update, repo)
+				if err != nil {
+					return err
+				}
+				if len(updateReqs) > 0 {
+					reqs = append(reqs, updateReqs...)
+				}
+			}
+			cancel()
+		}
+
+		for _, filename := range changes.RemovedFilenames {
+			reqs = append(reqs, b.addDelete(filename, repo))
+		}
+
+		if len(reqs) > 0 {
+			esBatchSize := 50
+
+			for i := 0; i < len(reqs); i += esBatchSize {
+				_, err := b.inner.Client.Bulk().
+					Index(b.inner.VersionedIndexName()).
+					Add(reqs[i:min(i+esBatchSize, len(reqs))]...).
+					Do(ctx)
+				if err != nil {
+					return err
+				}
 			}
 		}
-		cancel()
-	}
-
-	for _, filename := range changes.RemovedFilenames {
-		reqs = append(reqs, b.addDelete(filename, repo))
-	}
-
-	if len(reqs) > 0 {
-		esBatchSize := 50
-
-		for i := 0; i < len(reqs); i += esBatchSize {
-			_, err := b.inner.Client.Bulk().
-				Index(b.inner.VersionedIndexName()).
-				Add(reqs[i:min(i+esBatchSize, len(reqs))]...).
-				Do(ctx)
-			if err != nil {
-				return err
-			}
-		}
-	}
+	*/
 	return nil
 }
+
+/*
 
 // indexPos find words positions for start and the following end on content. It will
 // return the beginning position of the first start and the ending position of the
@@ -275,40 +267,68 @@ func extractAggs(searchResult *elastic.SearchResult) []*internal.SearchResultLan
 	}
 	return searchResultLanguages
 }
+*/
 
 // Search searches for codes and language stats by given conditions.
 func (b *Indexer) Search(ctx context.Context, repoIDs []int64, language, keyword string, page, pageSize int, isMatch bool) (int64, []*internal.SearchResult, []*internal.SearchResultLanguages, error) {
-	searchType := esMultiMatchTypeBestFields
-	if isMatch {
-		searchType = esMultiMatchTypePhrasePrefix
-	}
-
-	kwQuery := elastic.NewMultiMatchQuery(keyword, "content").Type(searchType)
-	query := elastic.NewBoolQuery()
-	query = query.Must(kwQuery)
-	if len(repoIDs) > 0 {
-		repoStrs := make([]any, 0, len(repoIDs))
-		for _, repoID := range repoIDs {
-			repoStrs = append(repoStrs, repoID)
+	/*
+		kwQuery := elastic.NewMultiMatchQuery(keyword, "content").Type(searchType)
+		query := elastic.NewBoolQuery()
+		query = query.Must(kwQuery)
+		if len(repoIDs) > 0 {
+			repoStrs := make([]any, 0, len(repoIDs))
+			for _, repoID := range repoIDs {
+				repoStrs = append(repoStrs, repoID)
+			}
+			repoQuery := elastic.NewTermsQuery("repo_id", repoStrs...)
+			query = query.Must(repoQuery)
 		}
-		repoQuery := elastic.NewTermsQuery("repo_id", repoStrs...)
-		query = query.Must(repoQuery)
-	}
 
-	var (
-		start       int
-		kw          = "<em>" + keyword + "</em>"
-		aggregation = elastic.NewTermsAggregation().Field("language").Size(10).OrderByCountDesc()
-	)
+		var (
+			start       int
+			kw          = "<em>" + keyword + "</em>"
+			aggregation = elastic.NewTermsAggregation().Field("language").Size(10).OrderByCountDesc()
+		)
 
-	if page > 0 {
-		start = (page - 1) * pageSize
-	}
+		if page > 0 {
+			start = (page - 1) * pageSize
+		}
 
-	if len(language) == 0 {
-		searchResult, err := b.inner.Client.Search().
+		if len(language) == 0 {
+			searchResult, err := b.inner.Client.Search().
+				Index(b.inner.VersionedIndexName()).
+				Aggregation("language", aggregation).
+				Query(query).
+				Highlight(
+					elastic.NewHighlight().
+						Field("content").
+						NumOfFragments(0). // return all highting content on fragments
+						HighlighterType("fvh"),
+				).
+				Sort("repo_id", true).
+				From(start).Size(pageSize).
+				Do(ctx)
+			if err != nil {
+				return 0, nil, nil, err
+			}
+
+			return convertResult(searchResult, kw, pageSize)
+		}
+
+		langQuery := elastic.NewMatchQuery("language", language)
+		countResult, err := b.inner.Client.Search().
 			Index(b.inner.VersionedIndexName()).
 			Aggregation("language", aggregation).
+			Query(query).
+			Size(0). // We only need stats information
+			Do(ctx)
+		if err != nil {
+			return 0, nil, nil, err
+		}
+
+		query = query.Must(langQuery)
+		searchResult, err := b.inner.Client.Search().
+			Index(b.inner.VersionedIndexName()).
 			Query(query).
 			Highlight(
 				elastic.NewHighlight().
@@ -323,38 +343,10 @@ func (b *Indexer) Search(ctx context.Context, repoIDs []int64, language, keyword
 			return 0, nil, nil, err
 		}
 
-		return convertResult(searchResult, kw, pageSize)
-	}
+		total, hits, _, err := convertResult(searchResult, kw, pageSize)
 
-	langQuery := elastic.NewMatchQuery("language", language)
-	countResult, err := b.inner.Client.Search().
-		Index(b.inner.VersionedIndexName()).
-		Aggregation("language", aggregation).
-		Query(query).
-		Size(0). // We only need stats information
-		Do(ctx)
-	if err != nil {
-		return 0, nil, nil, err
-	}
+		return total, hits, extractAggs(countResult), err
+	*/
 
-	query = query.Must(langQuery)
-	searchResult, err := b.inner.Client.Search().
-		Index(b.inner.VersionedIndexName()).
-		Query(query).
-		Highlight(
-			elastic.NewHighlight().
-				Field("content").
-				NumOfFragments(0). // return all highting content on fragments
-				HighlighterType("fvh"),
-		).
-		Sort("repo_id", true).
-		From(start).Size(pageSize).
-		Do(ctx)
-	if err != nil {
-		return 0, nil, nil, err
-	}
-
-	total, hits, _, err := convertResult(searchResult, kw, pageSize)
-
-	return total, hits, extractAggs(countResult), err
+	return 0, nil, nil, nil
 }
