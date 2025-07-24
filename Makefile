@@ -384,7 +384,7 @@ lint-go-windows:
 .PHONY: lint-go-gitea-vet
 lint-go-gitea-vet: ## lint go files with gitea-vet
 	@echo "Running gitea-vet..."
-	@GOOS= GOARCH= $(GO) build code.gitea.io/gitea-vet
+	@GOOS= GOARCH= CGO_ENABLED=0 $(GO) build code.gitea.io/gitea-vet
 	@$(GO) vet -vettool=gitea-vet ./...
 
 .PHONY: lint-go-gopls
@@ -421,7 +421,7 @@ watch-frontend: node-check node_modules ## watch frontend files and continuously
 
 .PHONY: watch-backend
 watch-backend: go-check ## watch backend files and continuously rebuild
-	GITEA_RUN_MODE=dev $(GO) run $(AIR_PACKAGE) -c .air.toml
+	CGO_ENABLED="$(CGO_ENABLED)" GITEA_RUN_MODE=dev $(GO) run $(AIR_PACKAGE) -c .air.toml
 
 .PHONY: test
 test: test-frontend test-backend ## test everything
@@ -682,54 +682,54 @@ migrations.sqlite.test: $(GO_SOURCES) generate-ini-sqlite
 
 .PHONY: migrations.individual.mysql.test
 migrations.individual.mysql.test: $(GO_SOURCES)
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/mysql.ini $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/mysql.ini CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
 
 .PHONY: migrations.individual.sqlite.test\#%
 migrations.individual.sqlite.test\#%: $(GO_SOURCES) generate-ini-sqlite
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini CGO_ENABLED=1 $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
 
 .PHONY: migrations.individual.pgsql.test
 migrations.individual.pgsql.test: $(GO_SOURCES)
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/pgsql.ini $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/pgsql.ini CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
 
 .PHONY: migrations.individual.pgsql.test\#%
 migrations.individual.pgsql.test\#%: $(GO_SOURCES) generate-ini-pgsql
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/pgsql.ini $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/pgsql.ini CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
 
 .PHONY: migrations.individual.mssql.test
 migrations.individual.mssql.test: $(GO_SOURCES) generate-ini-mssql
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/mssql.ini $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/mssql.ini CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
 
 .PHONY: migrations.individual.mssql.test\#%
 migrations.individual.mssql.test\#%: $(GO_SOURCES) generate-ini-mssql
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/mssql.ini $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/mssql.ini CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
 
 .PHONY: migrations.individual.sqlite.test
 migrations.individual.sqlite.test: $(GO_SOURCES) generate-ini-sqlite
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini CGO_ENABLED=1 $(GO) test $(GOTESTFLAGS) -tags='$(TEST_TAGS)' -p 1 $(MIGRATE_TEST_PACKAGES)
 
 .PHONY: migrations.individual.sqlite.test\#%
 migrations.individual.sqlite.test\#%: $(GO_SOURCES) generate-ini-sqlite
-	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
+	GITEA_ROOT="$(CURDIR)" GITEA_CONF=tests/sqlite.ini CGO_ENABLED=1 $(GO) test $(GOTESTFLAGS) -tags '$(TEST_TAGS)' code.gitea.io/gitea/models/migrations/$*
 
 e2e.mysql.test: $(GO_SOURCES)
-	$(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.mysql.test
+	CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.mysql.test
 
 e2e.pgsql.test: $(GO_SOURCES)
-	$(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.pgsql.test
+	CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.pgsql.test
 
 e2e.mssql.test: $(GO_SOURCES)
-	$(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.mssql.test
+	CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.mssql.test
 
 e2e.sqlite.test: $(GO_SOURCES)
-	$(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.sqlite.test -tags '$(TEST_TAGS)'
+	CGO_ENABLED=0 $(GO) test $(GOTESTFLAGS) -c code.gitea.io/gitea/tests/e2e -o e2e.sqlite.test -tags '$(TEST_TAGS)'
 
 .PHONY: check
 check: test
 
 .PHONY: install $(TAGS_PREREQ)
 install: $(wildcard *.go)
-	CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) install -v -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)'
+	CGO_ENABLED="$(CGO_ENABLED)" CGO_CFLAGS="$(CGO_CFLAGS)" $(GO) install -v -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)'
 
 .PHONY: build
 build: frontend backend ## build everything
