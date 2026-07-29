@@ -58,8 +58,11 @@ func SetIssueAsClosed(ctx context.Context, issue *Issue, doer *user_model.User, 
 		}
 	}
 
-	// Check for open dependencies
-	if issue.Repo.IsDependenciesEnabled(ctx) {
+	// Check for open dependencies.
+	// Pull requests are exempt: their dependencies gate merging, not closing, and that
+	// gate lives in pull_service.CheckPullMergeable. Blocking here would also make a
+	// pull request impossible to close manually, leaving no way out of the dependency.
+	if !issue.IsPull && issue.Repo.IsDependenciesEnabled(ctx) {
 		// only check if dependencies are enabled and we're about to close an issue, otherwise reopening an issue would fail when there are unsatisfied dependencies
 		noDeps, err := IssueNoDependenciesLeft(ctx, issue)
 		if err != nil {
