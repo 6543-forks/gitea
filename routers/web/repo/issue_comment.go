@@ -162,11 +162,8 @@ func NewComment(ctx *context.Context) {
 			if err := issue_service.CloseIssue(ctx, issue, ctx.Doer, ""); err != nil {
 				log.Error("CloseIssue: %v", err)
 				if issues_model.IsErrDependenciesLeft(err) {
-					if issue.IsPull {
-						ctx.Flash.Error(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
-					} else {
-						ctx.Flash.Error(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
-					}
+					// only issues can be blocked from closing, pull requests are blocked from merging
+					ctx.Flash.Error(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
 				}
 			} else {
 				if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
