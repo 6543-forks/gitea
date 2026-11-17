@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"testing"
 
+	auth_model "gitea.dev/models/auth"
 	deploykey_model "gitea.dev/models/deploykey"
 	"gitea.dev/models/perm"
 	repo_model "gitea.dev/models/repo"
@@ -16,6 +17,7 @@ import (
 	"gitea.dev/modules/git/gitcmd"
 	lfs_module "gitea.dev/modules/lfs"
 	"gitea.dev/modules/setting"
+	api "gitea.dev/modules/structs"
 	"gitea.dev/modules/test"
 	"gitea.dev/tests"
 
@@ -101,4 +103,26 @@ func TestDeployTokenOrgSettings(t *testing.T) {
 
 	session.MakeRequest(t, NewRequestWithValues(t, "POST", fmt.Sprintf("/org/org3/settings/keys/delete?id=%d", key.ID), nil), http.StatusOK)
 	unittest.AssertNotExistsBean(t, &deploykey_model.DeployKey{ID: key.ID})
+}
+
+func TestAPIOrgDeployToken(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	token := getUserToken(t, "user2", auth_model.AccessTokenScopeWriteOrganization)
+
+	req := NewRequestWithJSON(t, "POST", "/api/v1/orgs/org3/keys/tokens", api.CreateDeployKeyTokenOption{Title: "ci", ReadOnly: true}).AddTokenAuth(token)
+	created := DecodeJSON(t, MakeRequest(t, req, http.StatusCreated), &api.DeployKey{})
+	assert.True(t, created.ReadOnly)
+	assert.NotEmpty(t, created.Token)
+	unittest.AssertExistsAndLoadBean(t, &deploykey_model.DeployKey{ID: created.ID, OwnerID: 3})
+
+	resp := MakeRequest(t, NewRequest(t, "GET", "/api/v1/orgs/org3/keys").AddTokenAuth(token), http.StatusOK)
+	keys := DecodeJSON(t, resp, []*api.DeployKey{})
+	require.Len(t, keys, 1)
+	assert.Empty(t, keys[0].Token, "the token is only shown when it is created")
+	assert.Equal(t, "1", resp.Header().Get("X-Total-Count"))
+
+	keyURL := fmt.Sprintf("/api/v1/orgs/org3/keys/%d", created.ID)
+	MakeRequest(t, NewRequest(t, "GET", keyURL).AddTokenAuth(getUserToken(t, "user4", auth_model.AccessTokenScopeReadOrganization)), http.StatusForbidden)
+	MakeRequest(t, NewRequest(t, "DELETE", keyURL).AddTokenAuth(token), http.StatusNoContent)
+	MakeRequest(t, NewRequest(t, "GET", keyURL).AddTokenAuth(token), http.StatusNotFound)
 }

@@ -96,7 +96,7 @@ func ListDeployKeys(ctx *context.APIContext) {
 
 	apiDeployKeys := make([]*api.DeployKey, len(keys))
 	for i := range keys {
-		apiDeployKeys[i] = convert.ToDeployKey(ctx, ctx.Repo.Repository, keys[i])
+		apiDeployKeys[i] = convert.ToDeployKey(ctx, ctx.Repo.Repository.APIURL(ctx), keys[i])
 		if ctx.Doer.IsAdmin || ((ctx.Repo.Repository.ID == keys[i].RepoID) && (ctx.Doer.ID == ctx.Repo.Owner.ID)) {
 			apiDeployKeys[i], _ = appendPrivateInformation(ctx, apiDeployKeys[i], keys[i], ctx.Repo.Repository)
 		}
@@ -142,7 +142,7 @@ func GetDeployKey(ctx *context.APIContext) {
 		return
 	}
 
-	apiDeployKey := convert.ToDeployKey(ctx, ctx.Repo.Repository, key)
+	apiDeployKey := convert.ToDeployKey(ctx, ctx.Repo.Repository.APIURL(ctx), key)
 	if ctx.Doer.IsAdmin || ((ctx.Repo.Repository.ID == key.RepoID) && (ctx.Doer.ID == ctx.Repo.Owner.ID)) {
 		apiDeployKey, _ = appendPrivateInformation(ctx, apiDeployKey, key, ctx.Repo.Repository)
 	}
@@ -220,7 +220,7 @@ func CreateDeployKey(ctx *context.APIContext) {
 		return
 	}
 	audit.Record(ctx, audit_model.RepositoryDeployKeyAdd, ctx.Repo.Repository, "deploy_key", key.Name)
-	ctx.JSON(http.StatusCreated, convert.ToDeployKey(ctx, ctx.Repo.Repository, key))
+	ctx.JSON(http.StatusCreated, convert.ToDeployKey(ctx, ctx.Repo.Repository.APIURL(ctx), key))
 }
 
 // CreateDeployToken create a deploy token for a repository
@@ -262,7 +262,7 @@ func CreateDeployToken(ctx *context.APIContext) {
 	}
 	audit.Record(ctx, audit_model.RepositoryDeployKeyAdd, ctx.Repo.Repository, "deploy_key", key.Name)
 
-	ctx.JSON(http.StatusCreated, convert.ToDeployKey(ctx, ctx.Repo.Repository, key))
+	ctx.JSON(http.StatusCreated, convert.ToDeployKey(ctx, ctx.Repo.Repository.APIURL(ctx), key))
 }
 
 // DeleteDeployKey delete deploy key for a repository

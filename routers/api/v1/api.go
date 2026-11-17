@@ -1798,6 +1798,12 @@ func Routes() *web.Router {
 					Patch(bind(api.EditHookOption{}), org.EditHook).
 					Delete(org.DeleteHook)
 			}, reqToken(), reqOrgOwnership(), reqWebhooksEnabled())
+			m.Group("/keys", func() {
+				m.Get("", org.ListDeployKeys)
+				m.Post("/tokens", bind(api.CreateDeployKeyTokenOption{}), org.CreateDeployToken)
+				m.Combo("/{id}").Get(org.GetDeployKey).
+					Delete(org.DeleteDeployKey)
+			}, reqToken(), reqOrgOwnership())
 			m.Group("/avatar", func() {
 				m.Post("", bind(api.UpdateUserAvatarOption{}), org.UpdateAvatar)
 				m.Delete("", org.DeleteAvatar)

@@ -14460,6 +14460,162 @@
         ]
       }
     },
+    "/orgs/{org}/keys": {
+      "get": {
+        "operationId": "orgListDeployKeys",
+        "parameters": [
+          {
+            "description": "name of the organization",
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "page number of results to return (1-based)",
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "page size of results",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DeployKeyList"
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "List an organization's deploy keys, they reach every repository of the organization",
+        "tags": [
+          "organization"
+        ]
+      }
+    },
+    "/orgs/{org}/keys/tokens": {
+      "post": {
+        "operationId": "orgCreateDeployToken",
+        "parameters": [
+          {
+            "description": "name of the organization",
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeployKeyTokenOption"
+              }
+            }
+          },
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/DeployKey"
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Add a deploy token to an organization, it authenticates git over HTTPS for every repository of the organization",
+        "tags": [
+          "organization"
+        ]
+      }
+    },
+    "/orgs/{org}/keys/{id}": {
+      "delete": {
+        "operationId": "orgDeleteDeployKey",
+        "parameters": [
+          {
+            "description": "name of the organization",
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "id of the key to delete",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/empty"
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Delete a deploy key from an organization",
+        "tags": [
+          "organization"
+        ]
+      },
+      "get": {
+        "operationId": "orgGetDeployKey",
+        "parameters": [
+          {
+            "description": "name of the organization",
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "id of the key to get",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DeployKey"
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Get an organization's deploy key by id",
+        "tags": [
+          "organization"
+        ]
+      }
+    },
     "/orgs/{org}/labels": {
       "get": {
         "operationId": "orgListLabels",
