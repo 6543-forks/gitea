@@ -12,27 +12,67 @@ import (
 	"gitea.dev/models/db"
 	deploykey_model "gitea.dev/models/deploykey"
 	"gitea.dev/models/perm"
+	repo_model "gitea.dev/models/repo"
+	user_model "gitea.dev/models/user"
 	"gitea.dev/modules/htmlutil"
 	"gitea.dev/modules/setting"
+	"gitea.dev/modules/templates"
 	"gitea.dev/modules/util"
+	shared_user "gitea.dev/routers/web/shared/user"
 	asymkey_service "gitea.dev/services/asymkey"
 	"gitea.dev/services/audit"
 	"gitea.dev/services/context"
 	"gitea.dev/services/forms"
 )
 
+const tplOrgDeployKeys templates.TplName = "org/settings/deploy_keys"
+
+// deployKeysCtx is where the deploy-keys of a settings page belong: a repository or an organization.
+type deployKeysCtx struct {
+	Owner        *user_model.User
+	Repo         *repo_model.Repository
+	Scope        deploykey_model.Scope
+	Template     templates.TplName
+	RedirectLink string
+}
+
+func getDeployKeysCtx(ctx *context.Context) *deployKeysCtx {
+	if ctx.Data["PageIsOrgSettings"] == true {
+		return &deployKeysCtx{
+			Owner:        ctx.ContextUser,
+			Scope:        deploykey_model.Scope{OwnerID: ctx.ContextUser.ID},
+			Template:     tplOrgDeployKeys,
+			RedirectLink: ctx.Org.OrgLink + "/settings/keys",
+		}
+	}
+	return &deployKeysCtx{
+		Repo:         ctx.Repo.Repository,
+		Scope:        deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID},
+		Template:     tplDeployKeys,
+		RedirectLink: ctx.Repo.RepoLink + "/settings/keys",
+	}
+}
+
 func DeployKeys(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.deploy_keys")
 	ctx.Data["PageIsSettingsKeys"] = true
 	ctx.Data["DisableSSH"] = setting.SSH.Disabled
 
-	keys, err := db.Find[deploykey_model.DeployKey](ctx, deploykey_model.ListDeployKeysOptions{Scope: deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}})
+	dCtx := getDeployKeysCtx(ctx)
+	if dCtx.Owner != nil {
+		if _, err := shared_user.RenderUserOrgHeader(ctx); err != nil {
+			ctx.ServerErrorAuto(err)
+			return
+		}
+	}
+
+	keys, err := db.Find[deploykey_model.DeployKey](ctx, deploykey_model.ListDeployKeysOptions{Scope: dCtx.Scope})
 	if err != nil {
 		ctx.ServerErrorAuto(err)
 		return
 	}
-	ctx.Data["RepoDeployKeys"] = keys
-	ctx.HTML(http.StatusOK, tplDeployKeys)
+	ctx.Data["DeployKeys"] = keys
+	ctx.HTML(http.StatusOK, dCtx.Template)
 }
 
 func DeployKeysPost(ctx *context.Context) {
@@ -76,7 +116,8 @@ func DeployKeysPost(ctx *context.Context) {
 }
 
 func DeleteDeployKey(ctx *context.Context) {
-	key, err := asymkey_service.DeleteDeployKey(ctx, ctx.Repo.Repository, ctx.FormInt64("id"))
+	dCtx := getDeployKeysCtx(ctx)
+	key, err := asymkey_service.DeleteDeployKey(ctx, dCtx.Scope, ctx.FormInt64("id"))
 	if err != nil && !deploykey_model.IsErrDeployKeyNotExist(err) { // a key that is already gone leaves the caller with the state it asked for
 		ctx.ServerErrorAuto(err)
 		return
@@ -84,7 +125,7 @@ func DeleteDeployKey(ctx *context.Context) {
 	if key != nil {
 		ctx.Flash.Success(ctx.Tr("repo.settings.deploy_key_deletion_success", key.Name))
 	}
-	ctx.JSONRedirect(ctx.Repo.RepoLink + "/settings/keys")
+	ctx.JSONRedirect(dCtx.RedirectLink)
 }
 
 func DeployKeyGenerateToken(ctx *context.Context) {
@@ -93,8 +134,9 @@ func DeployKeyGenerateToken(ctx *context.Context) {
 		return
 	}
 
+	dCtx := getDeployKeysCtx(ctx)
 	accessMode := util.Iif(form.IsWritable, perm.AccessModeWrite, perm.AccessModeRead)
-	key, err := deploykey_model.AddDeployKeyToken(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, form.Title, accessMode)
+	key, err := deploykey_model.AddDeployKeyToken(ctx, dCtx.Scope, form.Title, accessMode)
 	if err != nil {
 		if deploykey_model.IsErrDeployKeyNameAlreadyUsed(err) {
 			ctx.JSONErrorWithField(ctx.Tr("repo.settings.key_name_used"), "title")
@@ -103,14 +145,15 @@ func DeployKeyGenerateToken(ctx *context.Context) {
 		}
 		return
 	}
-	audit.Record(ctx, audit_model.RepositoryDeployKeyAdd, ctx.Repo.Repository, "deploy_key", key.Name)
+	audit.RecordScoped(ctx, dCtx.Owner, dCtx.Repo, audit.DeployKeyAdd, "deploy_key", key.Name)
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.generate_deploy_token_success", htmlutil.HTMLFormat("<code>%s</code>", key.Token)))
-	ctx.JSONRedirect(ctx.Repo.RepoLink + "/settings/keys")
+	ctx.JSONRedirect(dCtx.RedirectLink)
 }
 
 func DeployKeyRegenerateToken(ctx *context.Context) {
-	key, err := deploykey_model.RegenerateDeployKeyToken(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, ctx.FormInt64("id"))
+	dCtx := getDeployKeysCtx(ctx)
+	key, err := deploykey_model.RegenerateDeployKeyToken(ctx, dCtx.Scope, ctx.FormInt64("id"))
 	if err != nil {
 		if deploykey_model.IsErrDeployKeyNotExist(err) {
 			ctx.JSONErrorNotFound()
@@ -119,8 +162,8 @@ func DeployKeyRegenerateToken(ctx *context.Context) {
 		}
 		return
 	}
-	audit.Record(ctx, audit_model.RepositoryDeployKeyRegenerate, ctx.Repo.Repository, "deploy_key", key.Name)
+	audit.RecordScoped(ctx, dCtx.Owner, dCtx.Repo, audit.DeployKeyRegenerate, "deploy_key", key.Name)
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.regenerate_deploy_token_success", htmlutil.HTMLFormat("<code>%s</code>", key.Token)))
-	ctx.JSONRedirect(ctx.Repo.RepoLink + "/settings/keys")
+	ctx.JSONRedirect(dCtx.RedirectLink)
 }

@@ -1,6 +1,6 @@
-{{if .RepoDeployKeys}}
+{{if .DeployKeys}}
 	<div class="flex-divided-list items-with-main">
-		{{range $key := .RepoDeployKeys}}
+		{{range $key := .DeployKeys}}
 			<div class="item">
 				<div class="item-leading">
 					{{$usedRecently := and $key.HasUsed $key.HasRecentActivity}}

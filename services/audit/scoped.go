@@ -40,6 +40,19 @@ var (
 		User: audit_model.UserSecretRemove,
 	}
 
+	DeployKeyAdd = ScopedActions{
+		Repo: audit_model.RepositoryDeployKeyAdd,
+		Org:  audit_model.OrganizationDeployKeyAdd,
+	}
+	DeployKeyRegenerate = ScopedActions{
+		Repo: audit_model.RepositoryDeployKeyRegenerate,
+		Org:  audit_model.OrganizationDeployKeyRegenerate,
+	}
+	DeployKeyRemove = ScopedActions{
+		Repo: audit_model.RepositoryDeployKeyRemove,
+		Org:  audit_model.OrganizationDeployKeyRemove,
+	}
+
 	OAuth2ApplicationAdd = ScopedActions{
 		User:   audit_model.UserOAuth2ApplicationAdd,
 		Org:    audit_model.OrganizationOAuth2ApplicationAdd,

@@ -9,6 +9,9 @@
 			{{ctx.Locale.Tr "repo.settings.hooks"}}
 		</a>
 		{{end}}
+		<a class="{{if .PageIsSettingsKeys}}active {{end}}item" href="{{.OrgLink}}/settings/keys">
+			{{ctx.Locale.Tr "repo.settings.deploy_keys"}}
+		</a>
 		<a class="{{if .PageIsOrgSettingsLabels}}active {{end}}item" href="{{.OrgLink}}/settings/labels">
 			{{ctx.Locale.Tr "repo.labels"}}
 		</a>

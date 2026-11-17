@@ -1014,6 +1014,13 @@ func registerWebRoutes(m *web.Router, webAuth *AuthMiddleware) {
 					addWebhookEditRoutes()
 				}, webhooksEnabled)
 
+				m.Group("/keys", func() {
+					m.Get("", repo_setting.DeployKeys)
+					m.Post("/generate-token", repo_setting.DeployKeyGenerateToken)
+					m.Post("/regenerate-token", repo_setting.DeployKeyRegenerateToken)
+					m.Post("/delete", repo_setting.DeleteDeployKey)
+				})
+
 				m.Group("/labels", func() {
 					m.Get("", org.RetrieveLabels, org.Labels)
 					m.Post("/new", web.Bind[*forms.CreateLabelForm](), org.NewLabel)

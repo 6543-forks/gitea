@@ -8,10 +8,8 @@ import (
 	"fmt"
 
 	asymkey_model "gitea.dev/models/asymkey"
-	audit_model "gitea.dev/models/audit"
 	"gitea.dev/models/db"
 	deploykey_model "gitea.dev/models/deploykey"
-	repo_model "gitea.dev/models/repo"
 	"gitea.dev/services/audit"
 )
 
@@ -53,11 +51,11 @@ func deleteDeployKeyFromDB(ctx context.Context, key *deploykey_model.DeployKey) 
 	return nil
 }
 
-// DeleteDeployKey deletes deploy key from its repository authorized_keys file if needed,
+// DeleteDeployKey deletes a deploy key of the scope and from the authorized_keys file if needed,
 // and returns the key it deleted. Permissions check should be done outside.
-func DeleteDeployKey(ctx context.Context, repo *repo_model.Repository, id int64) (*deploykey_model.DeployKey, error) {
+func DeleteDeployKey(ctx context.Context, scope deploykey_model.Scope, id int64) (*deploykey_model.DeployKey, error) {
 	deleted, err := db.WithTx2(ctx, func(ctx context.Context) (*deploykey_model.DeployKey, error) {
-		key, err := deploykey_model.GetDeployKeyByID(ctx, deploykey_model.Scope{RepoID: repo.ID}, id)
+		key, err := deploykey_model.GetDeployKeyByID(ctx, scope, id)
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +65,7 @@ func DeleteDeployKey(ctx context.Context, repo *repo_model.Repository, id int64)
 		return nil, err
 	}
 
-	audit.Record(ctx, audit_model.RepositoryDeployKeyRemove, repo, "deploy_key", deleted.Name)
+	audit.RecordScopedByID(ctx, scope.OwnerID, scope.RepoID, audit.DeployKeyRemove, "deploy_key", deleted.Name)
 
 	if deleted.KeyType == deploykey_model.KeyTypeToken {
 		return deleted, nil // a token never appears in the authorized_keys file

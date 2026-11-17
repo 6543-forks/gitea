@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	lfs_module "gitea.dev/modules/lfs"
 	"gitea.dev/modules/setting"
 	"gitea.dev/modules/test"
+	"gitea.dev/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,4 +85,20 @@ func TestDeployTokenGitHTTP(t *testing.T) {
 			batchAs(t, readKey.Token, otherRepo.FullName(), "download", http.StatusUnauthorized)
 		})
 	})
+}
+
+func TestDeployTokenOrgSettings(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	session := loginUser(t, "user2")
+
+	session.MakeRequest(t, NewRequestWithValues(t, "POST", "/org/org3/settings/keys/generate-token", map[string]string{"title": "ci"}), http.StatusOK)
+	key := unittest.AssertExistsAndLoadBean(t, &deploykey_model.DeployKey{OwnerID: 3, Name: "ci"})
+	assert.True(t, key.IsReadOnly())
+
+	resp := session.MakeRequest(t, NewRequest(t, "GET", "/org/org3/settings/keys"), http.StatusOK)
+	assert.Equal(t, "ci", NewHTMLParser(t, resp.Body).Find(".item-title").Text())
+	session.MakeRequest(t, NewRequest(t, "GET", "/user2/repo1/settings/keys"), http.StatusOK)
+
+	session.MakeRequest(t, NewRequestWithValues(t, "POST", fmt.Sprintf("/org/org3/settings/keys/delete?id=%d", key.ID), nil), http.StatusOK)
+	unittest.AssertNotExistsBean(t, &deploykey_model.DeployKey{ID: key.ID})
 }

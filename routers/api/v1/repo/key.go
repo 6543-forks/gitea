@@ -294,7 +294,7 @@ func DeleteDeployKey(ctx *context.APIContext) {
 	//     "$ref": "#/responses/error"
 
 	// a key that is already gone still leaves the caller with the state it asked for
-	if _, err := asymkey_service.DeleteDeployKey(ctx, ctx.Repo.Repository, ctx.PathParamInt64("id")); err != nil && !deploykey_model.IsErrDeployKeyNotExist(err) {
+	if _, err := asymkey_service.DeleteDeployKey(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, ctx.PathParamInt64("id")); err != nil && !deploykey_model.IsErrDeployKeyNotExist(err) {
 		if asymkey_model.IsErrKeyAccessDenied(err) {
 			ctx.APIError(http.StatusForbidden, "You do not have access to this key")
 		} else {
