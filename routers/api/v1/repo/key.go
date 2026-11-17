@@ -214,7 +214,7 @@ func CreateDeployKey(ctx *context.APIContext) {
 	}
 
 	accessMode := util.Iif(form.ReadOnly, perm.AccessModeRead, perm.AccessModeWrite)
-	key, err := deploykey_model.AddDeployKeySSH(ctx, ctx.Repo.Repository.ID, form.Title, content, accessMode)
+	key, err := deploykey_model.AddDeployKeySSH(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, form.Title, content, accessMode)
 	if err != nil {
 		HandleAddKeyError(ctx, err)
 		return

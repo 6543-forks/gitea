@@ -15,7 +15,7 @@ import (
 )
 
 // AddDeployKeySSH add new deploy-key to database and authorized_keys file.
-func AddDeployKeySSH(ctx context.Context, repoID int64, name, content string, accessMode perm.AccessMode) (*DeployKey, error) {
+func AddDeployKeySSH(ctx context.Context, scope Scope, name, content string, accessMode perm.AccessMode) (*DeployKey, error) {
 	if accessMode != perm.AccessModeRead && accessMode != perm.AccessModeWrite {
 		return nil, util.NewInvalidArgumentErrorf("invalid access mode")
 	}
@@ -24,16 +24,16 @@ func AddDeployKeySSH(ctx context.Context, repoID int64, name, content string, ac
 		if err != nil {
 			return nil, err
 		}
-		if has, err := db.Exist[DeployKey](ctx, builder.Eq{"repo_id": repoID, "key_id": pkey.ID}); err != nil {
+		if has, err := db.Exist[DeployKey](ctx, scope.cond().And(builder.Eq{"key_id": pkey.ID})); err != nil {
 			return nil, err
 		} else if has {
-			return nil, ErrDeployKeyAlreadyExist{pkey.ID, Scope{RepoID: repoID}}
+			return nil, ErrDeployKeyAlreadyExist{pkey.ID, scope}
 		}
-		if err := checkDeployKeyName(ctx, Scope{RepoID: repoID}, name); err != nil {
+		if err := checkDeployKeyName(ctx, scope, name); err != nil {
 			return nil, err
 		}
 
-		key := &DeployKey{KeyID: pkey.ID, RepoID: repoID, KeyType: KeyTypeSSH, Name: name, Fingerprint: pkey.Fingerprint, Mode: accessMode}
+		key := &DeployKey{KeyID: pkey.ID, RepoID: scope.RepoID, OwnerID: scope.OwnerID, KeyType: KeyTypeSSH, Name: name, Fingerprint: pkey.Fingerprint, Mode: accessMode}
 		return key, db.Insert(ctx, key)
 	})
 }
@@ -68,10 +68,13 @@ func GetDeployKeyForRepo(ctx context.Context, repoID, ownerID, deployKeyID int64
 	return key, nil
 }
 
-// GetDeployKeyByRepoPublicKey returns deploy-key by given public key ID and repository ID.
-func GetDeployKeyByRepoPublicKey(ctx context.Context, repoID, publicKeyID int64) (*DeployKey, error) {
+// GetDeployKeyByRepoPublicKey returns the deploy-key of the public key that reaches the repository.
+// When the public key was added to the repository and to its owner, the one with the higher access mode wins.
+func GetDeployKeyByRepoPublicKey(ctx context.Context, repoID, ownerID, publicKeyID int64) (*DeployKey, error) {
+	key := &DeployKey{}
 	// the type is part of the condition because every token row carries key id 0
-	key, exist, err := db.Get[DeployKey](ctx, builder.Eq{"key_id": publicKeyID, "repo_id": repoID, "key_type": KeyTypeSSH})
+	cond := reachRepoCond(repoID, ownerID).And(builder.Eq{"key_id": publicKeyID, "key_type": KeyTypeSSH})
+	exist, err := db.GetEngine(ctx).Where(cond).Desc("mode").Get(key)
 	if err != nil {
 		return nil, err
 	} else if !exist {

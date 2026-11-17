@@ -4,10 +4,13 @@
 package private
 
 import (
+	"errors"
 	"net/http"
 
 	asymkey_model "gitea.dev/models/asymkey"
 	deploykey_model "gitea.dev/models/deploykey"
+	repo_model "gitea.dev/models/repo"
+	"gitea.dev/modules/util"
 	"gitea.dev/services/context"
 )
 
@@ -20,9 +23,13 @@ func UpdatePublicKeyInRepo(ctx *context.PrivateContext) {
 		return
 	}
 
-	deployKey, err := deploykey_model.GetDeployKeyByRepoPublicKey(ctx, repoID, keyID)
+	var deployKey *deploykey_model.DeployKey
+	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
+	if err == nil {
+		deployKey, err = deploykey_model.GetDeployKeyByRepoPublicKey(ctx, repo.ID, repo.OwnerID, keyID)
+	}
 	if err != nil {
-		if deploykey_model.IsErrDeployKeyNotExist(err) {
+		if errors.Is(err, util.ErrNotExist) {
 			ctx.PlainText(http.StatusOK, "success")
 			return
 		}

@@ -95,7 +95,7 @@ func DeployKeysPost(ctx *context.Context) {
 	}
 
 	accessMode := util.Iif(form.IsWritable, perm.AccessModeWrite, perm.AccessModeRead)
-	key, err := deploykey_model.AddDeployKeySSH(ctx, ctx.Repo.Repository.ID, form.Title, content, accessMode)
+	key, err := deploykey_model.AddDeployKeySSH(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, form.Title, content, accessMode)
 	if err != nil {
 		switch {
 		case deploykey_model.IsErrDeployKeyAlreadyExist(err):
