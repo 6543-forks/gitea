@@ -27,9 +27,9 @@ func AddDeployKeySSH(ctx context.Context, repoID int64, name, content string, ac
 		if has, err := db.Exist[DeployKey](ctx, builder.Eq{"repo_id": repoID, "key_id": pkey.ID}); err != nil {
 			return nil, err
 		} else if has {
-			return nil, ErrDeployKeyAlreadyExist{pkey.ID, repoID}
+			return nil, ErrDeployKeyAlreadyExist{pkey.ID, Scope{RepoID: repoID}}
 		}
-		if err := checkDeployKeyName(ctx, repoID, name); err != nil {
+		if err := checkDeployKeyName(ctx, Scope{RepoID: repoID}, name); err != nil {
 			return nil, err
 		}
 
@@ -46,13 +46,24 @@ func (key *DeployKey) LoadPublicKey(ctx context.Context) (err error) {
 	return err
 }
 
-// GetDeployKeyByID returns deploy-key by given ID.
-func GetDeployKeyByID(ctx context.Context, repoID, deployKeyID int64) (*DeployKey, error) {
-	key, exist, err := db.Get[DeployKey](ctx, builder.Eq{"id": deployKeyID, "repo_id": repoID})
+// GetDeployKeyByID returns the deploy-key with the given ID that was added to the scope.
+func GetDeployKeyByID(ctx context.Context, scope Scope, deployKeyID int64) (*DeployKey, error) {
+	key, exist, err := db.Get[DeployKey](ctx, scope.cond().And(builder.Eq{"id": deployKeyID}))
 	if err != nil {
 		return nil, err
 	} else if !exist {
-		return nil, ErrDeployKeyNotExist{deployKeyID, 0, repoID}
+		return nil, ErrDeployKeyNotExist{deployKeyID, 0, scope}
+	}
+	return key, nil
+}
+
+// GetDeployKeyForRepo returns the deploy-key with the given ID if it reaches the repository.
+func GetDeployKeyForRepo(ctx context.Context, repoID, ownerID, deployKeyID int64) (*DeployKey, error) {
+	key, exist, err := db.Get[DeployKey](ctx, reachRepoCond(repoID, ownerID).And(builder.Eq{"id": deployKeyID}))
+	if err != nil {
+		return nil, err
+	} else if !exist {
+		return nil, ErrDeployKeyNotExist{deployKeyID, 0, Scope{RepoID: repoID}}
 	}
 	return key, nil
 }
@@ -64,7 +75,7 @@ func GetDeployKeyByRepoPublicKey(ctx context.Context, repoID, publicKeyID int64)
 	if err != nil {
 		return nil, err
 	} else if !exist {
-		return nil, ErrDeployKeyNotExist{0, publicKeyID, repoID}
+		return nil, ErrDeployKeyNotExist{0, publicKeyID, Scope{RepoID: repoID}}
 	}
 	return key, nil
 }

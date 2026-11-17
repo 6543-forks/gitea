@@ -13,6 +13,7 @@ import (
 	admin_model "gitea.dev/models/admin"
 	audit_model "gitea.dev/models/audit"
 	"gitea.dev/models/db"
+	deploykey_model "gitea.dev/models/deploykey"
 	git_model "gitea.dev/models/git"
 	issues_model "gitea.dev/models/issues"
 	"gitea.dev/models/organization"
@@ -97,7 +98,7 @@ func DeleteRepositoryDirectly(ctx context.Context, repoID int64, ignoreOrgTeams 
 	}
 
 	// Delete Deploy Keys
-	deleted, err := asymkey_service.DeleteRepoDeployKeys(ctx, repoID)
+	deleted, err := asymkey_service.DeleteDeployKeys(ctx, deploykey_model.Scope{RepoID: repoID})
 	if err != nil {
 		return err
 	}

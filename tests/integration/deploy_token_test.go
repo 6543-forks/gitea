@@ -25,9 +25,9 @@ func TestDeployTokenGitHTTP(t *testing.T) {
 	onGiteaRun(t, func(t *testing.T, u *url.URL) {
 		repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 		otherRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 2})
-		readKey, err := deploykey_model.AddDeployKeyToken(t.Context(), repo.ID, "read", perm.AccessModeRead)
+		readKey, err := deploykey_model.AddDeployKeyToken(t.Context(), deploykey_model.Scope{RepoID: repo.ID}, "read", perm.AccessModeRead)
 		require.NoError(t, err)
-		writeKey, err := deploykey_model.AddDeployKeyToken(t.Context(), repo.ID, "write", perm.AccessModeWrite)
+		writeKey, err := deploykey_model.AddDeployKeyToken(t.Context(), deploykey_model.Scope{RepoID: repo.ID}, "write", perm.AccessModeWrite)
 		require.NoError(t, err)
 
 		requestAs := func(t *testing.T, token, path string, expected int) {
@@ -50,6 +50,13 @@ func TestDeployTokenGitHTTP(t *testing.T) {
 		})
 		t.Run("OtherRepo", func(t *testing.T) {
 			requestAs(t, readKey.Token, "/"+otherRepo.FullName()+"/info/refs?service=git-upload-pack", http.StatusNotFound)
+		})
+		t.Run("Organization", func(t *testing.T) {
+			orgKey, err := deploykey_model.AddDeployKeyToken(t.Context(), deploykey_model.Scope{OwnerID: 3}, "org", perm.AccessModeRead)
+			require.NoError(t, err)
+			requestAs(t, orgKey.Token, "/org3/repo3/info/refs?service=git-upload-pack", http.StatusOK)
+			requestAs(t, orgKey.Token, "/org3/repo5/info/refs?service=git-upload-pack", http.StatusOK)
+			requestAs(t, orgKey.Token, "/"+otherRepo.FullName()+"/info/refs?service=git-upload-pack", http.StatusNotFound)
 		})
 		t.Run("UnknownToken", func(t *testing.T) {
 			requestAs(t, deploykey_model.DeployTokenPrefix+"0123456789abcdef", "/"+repo.FullName()+"/info/refs?service=git-upload-pack", http.StatusUnauthorized)

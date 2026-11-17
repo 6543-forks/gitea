@@ -26,7 +26,7 @@ func DeployKeys(ctx *context.Context) {
 	ctx.Data["PageIsSettingsKeys"] = true
 	ctx.Data["DisableSSH"] = setting.SSH.Disabled
 
-	keys, err := db.Find[deploykey_model.DeployKey](ctx, deploykey_model.ListDeployKeysOptions{RepoID: ctx.Repo.Repository.ID})
+	keys, err := db.Find[deploykey_model.DeployKey](ctx, deploykey_model.ListDeployKeysOptions{Scope: deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}})
 	if err != nil {
 		ctx.ServerErrorAuto(err)
 		return
@@ -94,7 +94,7 @@ func DeployKeyGenerateToken(ctx *context.Context) {
 	}
 
 	accessMode := util.Iif(form.IsWritable, perm.AccessModeWrite, perm.AccessModeRead)
-	key, err := deploykey_model.AddDeployKeyToken(ctx, ctx.Repo.Repository.ID, form.Title, accessMode)
+	key, err := deploykey_model.AddDeployKeyToken(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, form.Title, accessMode)
 	if err != nil {
 		if deploykey_model.IsErrDeployKeyNameAlreadyUsed(err) {
 			ctx.JSONErrorWithField(ctx.Tr("repo.settings.key_name_used"), "title")
@@ -110,7 +110,7 @@ func DeployKeyGenerateToken(ctx *context.Context) {
 }
 
 func DeployKeyRegenerateToken(ctx *context.Context) {
-	key, err := deploykey_model.RegenerateDeployKeyToken(ctx, ctx.Repo.Repository.ID, ctx.FormInt64("id"))
+	key, err := deploykey_model.RegenerateDeployKeyToken(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, ctx.FormInt64("id"))
 	if err != nil {
 		if deploykey_model.IsErrDeployKeyNotExist(err) {
 			ctx.JSONErrorNotFound()

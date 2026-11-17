@@ -83,7 +83,7 @@ func ListDeployKeys(ctx *context.APIContext) {
 
 	opts := deploykey_model.ListDeployKeysOptions{
 		ListOptions: utils.GetListOptions(ctx),
-		RepoID:      ctx.Repo.Repository.ID,
+		Scope:       deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID},
 		KeyID:       ctx.FormInt64("key_id"),
 		Fingerprint: ctx.FormString("fingerprint"),
 	}
@@ -136,7 +136,7 @@ func GetDeployKey(ctx *context.APIContext) {
 	//   default:
 	//     "$ref": "#/responses/error"
 
-	key, err := deploykey_model.GetDeployKeyByID(ctx, ctx.Repo.Repository.ID, ctx.PathParamInt64("id"))
+	key, err := deploykey_model.GetDeployKeyByID(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, ctx.PathParamInt64("id"))
 	if err != nil {
 		ctx.APIErrorAuto(err)
 		return
@@ -255,7 +255,7 @@ func CreateDeployToken(ctx *context.APIContext) {
 
 	form := web.GetForm[*api.CreateDeployKeyTokenOption](ctx)
 	accessMode := util.Iif(form.ReadOnly, perm.AccessModeRead, perm.AccessModeWrite)
-	key, err := deploykey_model.AddDeployKeyToken(ctx, ctx.Repo.Repository.ID, form.Title, accessMode)
+	key, err := deploykey_model.AddDeployKeyToken(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, form.Title, accessMode)
 	if err != nil {
 		HandleAddKeyError(ctx, err)
 		return

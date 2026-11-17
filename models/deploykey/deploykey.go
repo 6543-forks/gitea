@@ -23,10 +23,11 @@ const (
 )
 
 type DeployKey struct {
-	ID     int64 `xorm:"pk autoincr"`
-	KeyID  int64 `xorm:"INDEX"`
-	RepoID int64 `xorm:"INDEX"`
-	Name   string
+	ID      int64 `xorm:"pk autoincr"`
+	KeyID   int64 `xorm:"INDEX"`
+	RepoID  int64 `xorm:"INDEX"`
+	OwnerID int64 `xorm:"NOT NULL DEFAULT 0 INDEX"`
+	Name    string
 
 	KeyType KeyType `xorm:"NOT NULL DEFAULT 1"`
 
@@ -58,12 +59,27 @@ func init() {
 	db.RegisterModel(new(DeployKey))
 }
 
-func checkDeployKeyName(ctx context.Context, repoID int64, name string) error {
-	has, err := db.Exist[DeployKey](ctx, builder.Eq{"repo_id": repoID, "name": name})
+// Scope is what a deploy-key is added to, exactly one of its IDs is set.
+type Scope struct {
+	RepoID  int64
+	OwnerID int64 // the key reaches every repository of this organization
+}
+
+func (s Scope) cond() builder.Cond {
+	return builder.Eq{"repo_id": s.RepoID, "owner_id": s.OwnerID}
+}
+
+// reachRepoCond selects the deploy-keys that reach a repository: its own and those of its owner.
+func reachRepoCond(repoID, ownerID int64) builder.Cond {
+	return builder.Or(builder.Eq{"repo_id": repoID}, builder.Eq{"owner_id": ownerID})
+}
+
+func checkDeployKeyName(ctx context.Context, scope Scope, name string) error {
+	has, err := db.Exist[DeployKey](ctx, scope.cond().And(builder.Eq{"name": name}))
 	if err != nil {
 		return err
 	} else if has {
-		return ErrDeployKeyNameAlreadyUsed{repoID, name}
+		return ErrDeployKeyNameAlreadyUsed{scope, name}
 	}
 	return nil
 }
@@ -77,7 +93,7 @@ func UpdateDeployKeyLastUsed(ctx context.Context, id int64) error {
 // ListDeployKeysOptions are options for ListDeployKeys
 type ListDeployKeysOptions struct {
 	db.ListOptions
-	RepoID      int64
+	Scope       Scope
 	KeyID       int64
 	Fingerprint string
 }
@@ -87,8 +103,7 @@ func (opt ListDeployKeysOptions) ToOrders() string {
 }
 
 func (opt ListDeployKeysOptions) ToConds() builder.Cond {
-	cond := builder.NewCond()
-	cond = cond.And(builder.Eq{"repo_id": opt.RepoID}) // repo ID must be used
+	cond := opt.Scope.cond() // the scope must be used
 	if opt.KeyID != 0 {
 		cond = cond.And(builder.Eq{"key_id": opt.KeyID})
 	}

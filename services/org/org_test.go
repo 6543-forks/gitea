@@ -6,7 +6,9 @@ package org
 import (
 	"testing"
 
+	deploykey_model "gitea.dev/models/deploykey"
 	"gitea.dev/models/organization"
+	"gitea.dev/models/perm"
 	repo_model "gitea.dev/models/repo"
 	"gitea.dev/models/unittest"
 	user_model "gitea.dev/models/user"
@@ -47,13 +49,16 @@ func TestOrg(t *testing.T) {
 
 	t.Run("DeleteOrganization", func(t *testing.T) {
 		org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 6})
+		_, err := deploykey_model.AddDeployKeyToken(t.Context(), deploykey_model.Scope{OwnerID: org.ID}, "ci", perm.AccessModeRead)
+		require.NoError(t, err)
 		assert.NoError(t, DeleteOrganization(t.Context(), org, false))
 		unittest.AssertNotExistsBean(t, &organization.Organization{ID: 6})
+		unittest.AssertNotExistsBean(t, &deploykey_model.DeployKey{OwnerID: 6})
 		unittest.AssertNotExistsBean(t, &organization.OrgUser{OrgID: 6})
 		unittest.AssertNotExistsBean(t, &organization.Team{OrgID: 6})
 
 		org = unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
-		err := DeleteOrganization(t.Context(), org, false)
+		err = DeleteOrganization(t.Context(), org, false)
 		assert.Error(t, err)
 		assert.True(t, repo_model.IsErrUserOwnRepos(err))
 

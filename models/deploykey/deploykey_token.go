@@ -26,11 +26,12 @@ func (key *DeployKey) generateToken() {
 	key.Fingerprint = key.Token[:len(DeployTokenPrefix)+2] + "********" + key.Token[len(key.Token)-2:]
 }
 
-// AddDeployKeyToken adds a token that authenticates git HTTP requests for one repository.
+// AddDeployKeyToken adds a token that authenticates git HTTP requests for the repositories of the scope.
 // The plaintext token is only readable on the returned key.
-func AddDeployKeyToken(ctx context.Context, repoID int64, name string, accessMode perm.AccessMode) (*DeployKey, error) {
+func AddDeployKeyToken(ctx context.Context, scope Scope, name string, accessMode perm.AccessMode) (*DeployKey, error) {
 	key := &DeployKey{
-		RepoID:  repoID,
+		RepoID:  scope.RepoID,
+		OwnerID: scope.OwnerID,
 		KeyType: KeyTypeToken,
 		Name:    name,
 		Mode:    accessMode,
@@ -38,7 +39,7 @@ func AddDeployKeyToken(ctx context.Context, repoID int64, name string, accessMod
 	key.generateToken()
 
 	return db.WithTx2(ctx, func(ctx context.Context) (*DeployKey, error) {
-		if err := checkDeployKeyName(ctx, repoID, name); err != nil {
+		if err := checkDeployKeyName(ctx, scope, name); err != nil {
 			return nil, err
 		}
 		return key, db.Insert(ctx, key)
@@ -46,13 +47,13 @@ func AddDeployKeyToken(ctx context.Context, repoID int64, name string, accessMod
 }
 
 // RegenerateDeployKeyToken replaces the token value of an existing deploy token, keeping its name and access mode.
-func RegenerateDeployKeyToken(ctx context.Context, repoID, keyID int64) (*DeployKey, error) {
-	key, err := GetDeployKeyByID(ctx, repoID, keyID)
+func RegenerateDeployKeyToken(ctx context.Context, scope Scope, keyID int64) (*DeployKey, error) {
+	key, err := GetDeployKeyByID(ctx, scope, keyID)
 	if err != nil {
 		return nil, err
 	}
 	if key.KeyType != KeyTypeToken {
-		return nil, ErrDeployKeyNotExist{keyID, 0, repoID}
+		return nil, ErrDeployKeyNotExist{keyID, 0, scope}
 	}
 
 	key.generateToken()

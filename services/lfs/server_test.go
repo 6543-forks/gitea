@@ -108,7 +108,7 @@ func TestAuthenticate(t *testing.T) {
 
 	// a deploy-key doer has no user row, so the token must carry its ext doer data to stay redeemable
 	t.Run("handleLFSToken resolves deploy-key doers", func(t *testing.T) {
-		key, err := deploykey_model.AddDeployKeyToken(t.Context(), repo1.ID, "lfs", perm_model.AccessModeRead)
+		key, err := deploykey_model.AddDeployKeyToken(t.Context(), deploykey_model.Scope{RepoID: repo1.ID}, "lfs", perm_model.AccessModeRead)
 		require.NoError(t, err)
 		doer := user_model.NewDeployKeyUserWithKeyID(key.ID)
 

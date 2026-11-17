@@ -116,7 +116,7 @@ func testPreReceiveActionsBranch(t *testing.T) {
 }
 
 func testPreReceiveSystemUserTag(t *testing.T) {
-	deployKey, err := deploykey_model.AddDeployKeyToken(t.Context(), 2, "tag-pusher", perm.AccessModeWrite)
+	deployKey, err := deploykey_model.AddDeployKeyToken(t.Context(), deploykey_model.Scope{RepoID: 2}, "tag-pusher", perm.AccessModeWrite)
 	require.NoError(t, err)
 	actionsDoer := user_model.NewActionsUserWithTaskID(53)
 	deployKeyDoer := user_model.NewDeployKeyUserWithKeyID(deployKey.ID)

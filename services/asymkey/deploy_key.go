@@ -15,9 +15,9 @@ import (
 	"gitea.dev/services/audit"
 )
 
-// DeleteRepoDeployKeys deletes all deploy keys of a repository. permissions check should be done outside
-func DeleteRepoDeployKeys(ctx context.Context, repoID int64) (int, error) {
-	deployKeys, err := db.Find[deploykey_model.DeployKey](ctx, deploykey_model.ListDeployKeysOptions{RepoID: repoID})
+// DeleteDeployKeys deletes all deploy keys added to the scope. permissions check should be done outside
+func DeleteDeployKeys(ctx context.Context, scope deploykey_model.Scope) (int, error) {
+	deployKeys, err := db.Find[deploykey_model.DeployKey](ctx, deploykey_model.ListDeployKeysOptions{Scope: scope})
 	if err != nil {
 		return 0, fmt.Errorf("listDeployKeys: %w", err)
 	}
@@ -57,7 +57,7 @@ func deleteDeployKeyFromDB(ctx context.Context, key *deploykey_model.DeployKey) 
 // and returns the key it deleted. Permissions check should be done outside.
 func DeleteDeployKey(ctx context.Context, repo *repo_model.Repository, id int64) (*deploykey_model.DeployKey, error) {
 	deleted, err := db.WithTx2(ctx, func(ctx context.Context) (*deploykey_model.DeployKey, error) {
-		key, err := deploykey_model.GetDeployKeyByID(ctx, repo.ID, id)
+		key, err := deploykey_model.GetDeployKeyByID(ctx, deploykey_model.Scope{RepoID: repo.ID}, id)
 		if err != nil {
 			return nil, err
 		}

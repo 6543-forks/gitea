@@ -11,6 +11,7 @@ import (
 	activities_model "gitea.dev/models/activities"
 	audit_model "gitea.dev/models/audit"
 	"gitea.dev/models/db"
+	deploykey_model "gitea.dev/models/deploykey"
 	org_model "gitea.dev/models/organization"
 	packages_model "gitea.dev/models/packages"
 	access_model "gitea.dev/models/perm/access"
@@ -22,6 +23,7 @@ import (
 	"gitea.dev/modules/storage"
 	"gitea.dev/modules/structs"
 	"gitea.dev/modules/util"
+	asymkey_service "gitea.dev/services/asymkey"
 	"gitea.dev/services/audit"
 	repo_service "gitea.dev/services/repository"
 )
@@ -63,6 +65,7 @@ func DeleteOrganization(ctx context.Context, org *org_model.Organization, purge 
 		}
 	}
 
+	var deletedKeys int
 	if err := db.WithTx(ctx, func(ctx context.Context) error {
 		// Check ownership of repository.
 		count, err := repo_model.CountRepositories(ctx, repo_model.CountRepositoryOptions{OwnerID: org.ID})
@@ -79,12 +82,22 @@ func DeleteOrganization(ctx context.Context, org *org_model.Organization, purge 
 			return packages_model.ErrUserOwnPackages{UID: org.ID}
 		}
 
+		if deletedKeys, err = asymkey_service.DeleteDeployKeys(ctx, deploykey_model.Scope{OwnerID: org.ID}); err != nil {
+			return err
+		}
+
 		if err := deleteOrganization(ctx, org); err != nil {
 			return fmt.Errorf("DeleteOrganization: %w", err)
 		}
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	if deletedKeys > 0 {
+		if err := asymkey_service.RewriteAllPublicKeys(ctx); err != nil {
+			return err
+		}
 	}
 
 	audit.Record(ctx, audit_model.OrganizationDelete, org.AsUser())

@@ -11,9 +11,9 @@ import (
 
 // ErrDeployKeyNotExist represents a "DeployKeyNotExist" kind of error.
 type ErrDeployKeyNotExist struct {
-	ID     int64
-	KeyID  int64
-	RepoID int64
+	ID    int64
+	KeyID int64
+	Scope Scope
 }
 
 // IsErrDeployKeyNotExist checks if an error is a ErrDeployKeyNotExist.
@@ -23,7 +23,7 @@ func IsErrDeployKeyNotExist(err error) bool {
 }
 
 func (err ErrDeployKeyNotExist) Error() string {
-	return fmt.Sprintf("Deploy key does not exist [id: %d, key_id: %d, repo_id: %d]", err.ID, err.KeyID, err.RepoID)
+	return fmt.Sprintf("Deploy key does not exist [id: %d, key_id: %d, scope: %+v]", err.ID, err.KeyID, err.Scope)
 }
 
 func (err ErrDeployKeyNotExist) Unwrap() error {
@@ -32,8 +32,8 @@ func (err ErrDeployKeyNotExist) Unwrap() error {
 
 // ErrDeployKeyAlreadyExist represents a "DeployKeyAlreadyExist" kind of error.
 type ErrDeployKeyAlreadyExist struct {
-	KeyID  int64
-	RepoID int64
+	KeyID int64
+	Scope Scope
 }
 
 // IsErrDeployKeyAlreadyExist checks if an error is a ErrDeployKeyAlreadyExist.
@@ -43,7 +43,7 @@ func IsErrDeployKeyAlreadyExist(err error) bool {
 }
 
 func (err ErrDeployKeyAlreadyExist) Error() string {
-	return fmt.Sprintf("public key already exists [key_id: %d, repo_id: %d]", err.KeyID, err.RepoID)
+	return fmt.Sprintf("public key already exists [key_id: %d, scope: %+v]", err.KeyID, err.Scope)
 }
 
 func (err ErrDeployKeyAlreadyExist) Unwrap() error {
@@ -52,8 +52,8 @@ func (err ErrDeployKeyAlreadyExist) Unwrap() error {
 
 // ErrDeployKeyNameAlreadyUsed represents a "DeployKeyNameAlreadyUsed" kind of error.
 type ErrDeployKeyNameAlreadyUsed struct {
-	RepoID int64
-	Name   string
+	Scope Scope
+	Name  string
 }
 
 // IsErrDeployKeyNameAlreadyUsed checks if an error is a ErrDeployKeyNameAlreadyUsed.
@@ -63,7 +63,7 @@ func IsErrDeployKeyNameAlreadyUsed(err error) bool {
 }
 
 func (err ErrDeployKeyNameAlreadyUsed) Error() string {
-	return fmt.Sprintf("public key with name already exists [repo_id: %d, name: %s]", err.RepoID, err.Name)
+	return fmt.Sprintf("public key with name already exists [scope: %+v, name: %s]", err.Scope, err.Name)
 }
 
 func (err ErrDeployKeyNameAlreadyUsed) Unwrap() error {

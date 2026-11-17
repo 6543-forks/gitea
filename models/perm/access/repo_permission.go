@@ -377,12 +377,12 @@ func GetActionsUserRepoPermission(ctx context.Context, repo *repo_model.Reposito
 }
 
 // getDeployKeyRepoPermission returns the permissions that a deploy key grants on a repository.
-// A key only ever reaches the git data of the one repository it was added to, at its own access mode.
+// A key only ever reaches the git data of the repository or organization it was added to, at its own access mode.
 func getDeployKeyRepoPermission(ctx context.Context, repo *repo_model.Repository, keyID int64) (perm Permission, err error) {
-	key, err := deploykey_model.GetDeployKeyByID(ctx, repo.ID, keyID)
+	key, err := deploykey_model.GetDeployKeyForRepo(ctx, repo.ID, repo.OwnerID, keyID)
 	if err != nil {
 		if deploykey_model.IsErrDeployKeyNotExist(err) {
-			return perm, nil // the key belongs to another repository, so it grants nothing here
+			return perm, nil // the key belongs to another repository or owner, so it grants nothing here
 		}
 		return perm, err
 	}
