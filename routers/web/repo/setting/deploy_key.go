@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	asymkey_model "gitea.dev/models/asymkey"
-	audit_model "gitea.dev/models/audit"
 	"gitea.dev/models/db"
 	deploykey_model "gitea.dev/models/deploykey"
 	"gitea.dev/models/perm"
@@ -94,8 +93,9 @@ func DeployKeysPost(ctx *context.Context) {
 		return
 	}
 
+	dCtx := getDeployKeysCtx(ctx)
 	accessMode := util.Iif(form.IsWritable, perm.AccessModeWrite, perm.AccessModeRead)
-	key, err := deploykey_model.AddDeployKeySSH(ctx, deploykey_model.Scope{RepoID: ctx.Repo.Repository.ID}, form.Title, content, accessMode)
+	key, err := deploykey_model.AddDeployKeySSH(ctx, dCtx.Scope, form.Title, content, accessMode)
 	if err != nil {
 		switch {
 		case deploykey_model.IsErrDeployKeyAlreadyExist(err):
@@ -110,9 +110,9 @@ func DeployKeysPost(ctx *context.Context) {
 		return
 	}
 
-	audit.Record(ctx, audit_model.RepositoryDeployKeyAdd, ctx.Repo.Repository, "deploy_key", key.Name)
+	audit.RecordScoped(ctx, dCtx.Owner, dCtx.Repo, audit.DeployKeyAdd, "deploy_key", key.Name)
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", key.Name))
-	ctx.JSONRedirect(ctx.Repo.RepoLink + "/settings/keys")
+	ctx.JSONRedirect(dCtx.RedirectLink)
 }
 
 func DeleteDeployKey(ctx *context.Context) {

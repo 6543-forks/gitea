@@ -96,9 +96,12 @@ func TestDeployTokenOrgSettings(t *testing.T) {
 	session.MakeRequest(t, NewRequestWithValues(t, "POST", "/org/org3/settings/keys/generate-token", map[string]string{"title": "ci"}), http.StatusOK)
 	key := unittest.AssertExistsAndLoadBean(t, &deploykey_model.DeployKey{OwnerID: 3, Name: "ci"})
 	assert.True(t, key.IsReadOnly())
+	const sshKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICV0MGX/W9IvLA4FXpIuUcdDcbj5KX4syHgsTy7soVgf"
+	session.MakeRequest(t, NewRequestWithValues(t, "POST", "/org/org3/settings/keys", map[string]string{"title": "ssh", "content": sshKey, "is_writable": "1"}), http.StatusOK)
+	unittest.AssertExistsAndLoadBean(t, &deploykey_model.DeployKey{OwnerID: 3, Name: "ssh", Mode: perm.AccessModeWrite})
 
 	resp := session.MakeRequest(t, NewRequest(t, "GET", "/org/org3/settings/keys"), http.StatusOK)
-	assert.Equal(t, "ci", NewHTMLParser(t, resp.Body).Find(".item-title").Text())
+	assert.Equal(t, 2, NewHTMLParser(t, resp.Body).Find(".item-title").Length())
 	session.MakeRequest(t, NewRequest(t, "GET", "/user2/repo1/settings/keys"), http.StatusOK)
 
 	session.MakeRequest(t, NewRequestWithValues(t, "POST", fmt.Sprintf("/org/org3/settings/keys/delete?id=%d", key.ID), nil), http.StatusOK)

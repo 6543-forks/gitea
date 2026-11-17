@@ -1015,7 +1015,8 @@ func registerWebRoutes(m *web.Router, webAuth *AuthMiddleware) {
 				}, webhooksEnabled)
 
 				m.Group("/keys", func() {
-					m.Get("", repo_setting.DeployKeys)
+					m.Combo("").Get(repo_setting.DeployKeys).
+						Post(repo_setting.DeployKeysPost)
 					m.Post("/generate-token", repo_setting.DeployKeyGenerateToken)
 					m.Post("/regenerate-token", repo_setting.DeployKeyRegenerateToken)
 					m.Post("/delete", repo_setting.DeleteDeployKey)

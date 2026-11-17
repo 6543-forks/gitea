@@ -2827,6 +2827,7 @@
   "org.settings.delete_successful": "Organization <b>%s</b> has been deleted successfully.",
   "org.settings.hooks_desc": "Add webhooks which will be triggered for <strong>all repositories</strong> under this organization.",
   "org.settings.labels_desc": "Add labels which can be used on issues for <strong>all repositories</strong> under this organization.",
+  "org.settings.deploy_key_ssh_desc": "Add an SSH public key as deploy key, then use its private key to access every repository of this organization.",
   "org.settings.deploy_key_token_desc": "An HTTP token is used as the password of a Git request over HTTPS for every repository of this organization.",
   "org.settings.deploy_key_is_writable_info": "Allow this deploy key to <strong>push</strong> to every repository of this organization.",
   "org.settings.deploy_key_deletion_desc": "Removing a deploy key will revoke its access to the repositories of this organization. Continue?",
