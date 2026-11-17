@@ -118,11 +118,18 @@ func TestAPIOrgDeployToken(t *testing.T) {
 	assert.NotEmpty(t, created.Token)
 	unittest.AssertExistsAndLoadBean(t, &deploykey_model.DeployKey{ID: created.ID, OwnerID: 3})
 
+	const sshKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICV0MGX/W9IvLA4FXpIuUcdDcbj5KX4syHgsTy7soVgf"
+	req = NewRequestWithJSON(t, "POST", "/api/v1/orgs/org3/keys", api.CreateKeyOption{Title: "ssh", Key: sshKey}).AddTokenAuth(token)
+	sshCreated := DecodeJSON(t, MakeRequest(t, req, http.StatusCreated), &api.DeployKey{})
+	assert.Equal(t, "ssh", sshCreated.KeyType)
+	assert.False(t, sshCreated.ReadOnly)
+	unittest.AssertExistsAndLoadBean(t, &deploykey_model.DeployKey{ID: sshCreated.ID, OwnerID: 3})
+
 	resp := MakeRequest(t, NewRequest(t, "GET", "/api/v1/orgs/org3/keys").AddTokenAuth(token), http.StatusOK)
 	keys := DecodeJSON(t, resp, []*api.DeployKey{})
-	require.Len(t, keys, 1)
+	require.Len(t, keys, 2)
 	assert.Empty(t, keys[0].Token, "the token is only shown when it is created")
-	assert.Equal(t, "1", resp.Header().Get("X-Total-Count"))
+	assert.Equal(t, "2", resp.Header().Get("X-Total-Count"))
 
 	keyURL := fmt.Sprintf("/api/v1/orgs/org3/keys/%d", created.ID)
 	MakeRequest(t, NewRequest(t, "GET", keyURL).AddTokenAuth(getUserToken(t, "user4", auth_model.AccessTokenScopeReadOrganization)), http.StatusForbidden)

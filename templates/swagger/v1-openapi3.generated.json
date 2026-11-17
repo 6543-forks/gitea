@@ -14502,6 +14502,42 @@
         "tags": [
           "organization"
         ]
+      },
+      "post": {
+        "operationId": "orgCreateDeployKey",
+        "parameters": [
+          {
+            "description": "name of the organization",
+            "in": "path",
+            "name": "org",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKeyOption"
+              }
+            }
+          },
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/DeployKey"
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Add an SSH deploy key to an organization, it reaches every repository of the organization",
+        "tags": [
+          "organization"
+        ]
       }
     },
     "/orgs/{org}/keys/tokens": {

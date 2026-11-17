@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	asymkey_model "gitea.dev/models/asymkey"
 	"gitea.dev/models/db"
 	deploykey_model "gitea.dev/models/deploykey"
 	"gitea.dev/models/perm"
@@ -105,6 +106,48 @@ func GetDeployKey(ctx *context.APIContext) {
 		return
 	}
 	ctx.JSON(http.StatusOK, convert.ToDeployKey(ctx, orgAPIURL(ctx), key))
+}
+
+// CreateDeployKey adds an SSH deploy key to an organization
+func CreateDeployKey(ctx *context.APIContext) {
+	// swagger:operation POST /orgs/{org}/keys organization orgCreateDeployKey
+	// ---
+	// summary: Add an SSH deploy key to an organization, it reaches every repository of the organization
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: org
+	//   in: path
+	//   description: name of the organization
+	//   type: string
+	//   required: true
+	// - name: body
+	//   in: body
+	//   schema:
+	//     "$ref": "#/definitions/CreateKeyOption"
+	// responses:
+	//   "201":
+	//     "$ref": "#/responses/DeployKey"
+	//   default:
+	//     "$ref": "#/responses/error"
+
+	form := web.GetForm[*api.CreateKeyOption](ctx)
+	content, err := asymkey_model.CheckPublicKeyString(form.Key)
+	if err != nil {
+		repo.HandleCheckKeyStringError(ctx, err)
+		return
+	}
+
+	accessMode := util.Iif(form.ReadOnly, perm.AccessModeRead, perm.AccessModeWrite)
+	key, err := deploykey_model.AddDeployKeySSH(ctx, orgDeployKeyScope(ctx), form.Title, content, accessMode)
+	if err != nil {
+		repo.HandleAddKeyError(ctx, err)
+		return
+	}
+	audit.RecordScoped(ctx, ctx.Org.Organization.AsUser(), nil, audit.DeployKeyAdd, "deploy_key", key.Name)
+	ctx.JSON(http.StatusCreated, convert.ToDeployKey(ctx, orgAPIURL(ctx), key))
 }
 
 // CreateDeployToken creates a deploy token for an organization

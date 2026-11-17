@@ -1799,7 +1799,8 @@ func Routes() *web.Router {
 					Delete(org.DeleteHook)
 			}, reqToken(), reqOrgOwnership(), reqWebhooksEnabled())
 			m.Group("/keys", func() {
-				m.Get("", org.ListDeployKeys)
+				m.Combo("").Get(org.ListDeployKeys).
+					Post(bind(api.CreateKeyOption{}), org.CreateDeployKey)
 				m.Post("/tokens", bind(api.CreateDeployKeyTokenOption{}), org.CreateDeployToken)
 				m.Combo("/{id}").Get(org.GetDeployKey).
 					Delete(org.DeleteDeployKey)
